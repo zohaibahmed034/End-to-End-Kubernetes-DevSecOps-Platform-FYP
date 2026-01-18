@@ -1,0 +1,8 @@
+server:
+  port: 6060
+clair:
+  database:
+    type: pgsql
+    options:
+      source: host=postgres user=clair dbname=clair password=clair sslmode=disable
+      cachesize: 16384

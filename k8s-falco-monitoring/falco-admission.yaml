@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: falco-admission
+  namespace: falco-admission
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: falco-admission
+  template:
+    metadata:
+      labels:
+        app: falco-admission
+    spec:
+      containers:
+      - name: falco-admission
+        image: falcosecurity/falco:0.42.1
+        args: ["--admission-controller"]
+        ports:
+        - containerPort: 443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: falco-admission
+  namespace: falco-admission
+spec:
+  selector:
+    app: falco-admission
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 443
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: falco-admission
+webhooks:
+- name: falco-admission.falcosecurity.dev
+  clientConfig:
+    service:
+      name: falco-admission
+      namespace: falco-admission
+      path: "/validate"
+    caBundle: "" # <-- optional, fill if you have TLS
+  rules:
+  - operations: ["CREATE"]
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+
