@@ -22,13 +22,23 @@ pipeline {
     }
 
     stages {
-
+        stage('📦 0. Configure Git') {
+    steps {
+        sh 'git config --global --add safe.directory $WORKSPACE'
+    }
+}
         stage('📦 1. Clone Repository') {
             steps {
                 echo "Cloning GitHub repository..."
-                git branch: 'main',
-                    url: 'https://github.com/zohaibahmed034/End-to-End-Kubernetes-DevSecOps-Platform-FYP.git',
-                    credentialsId: "${GITHUB_CREDENTIALS}"
+                checkout([$class: 'GitSCM',
+                    branches: [[name: 'main']],
+                    doGenerateSubmoduleConfigurations: false,
+                    extensions: [[$class: 'WipeWorkspace']], // ensure clean workspace
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/zohaibahmed034/End-to-End-Kubernetes-DevSecOps-Platform-FYP.git',
+                        credentialsId: "${GITHUB_CREDENTIALS}"
+                    ]]
+                ])
             }
         }
 
@@ -39,39 +49,45 @@ pipeline {
             }
         }
 
-        stage('🔍 3. SonarQube SAST Scan') {
+        stage('Build Docker Image') {
             steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
-                    echo "Running SonarQube SAST scan..."
-                    withCredentials([string(credentialsId: "${SONARQUBE_TOKEN}", variable: 'SONAR_TOKEN')]) {
-                        sh """
-                        mkdir -p "${SONAR_DIR}"
-                        cd "${SONAR_DIR}"
-
-                        curl -Lo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
-                        unzip -o sonar-scanner.zip
-
-                        export PATH="${SONAR_DIR}/sonar-scanner-4.8.0.2856-linux/bin:\$PATH"
-                        cd "${WORKSPACE}"
-
-                        sonar-scanner \
-                        -Dsonar.projectKey=ghost-docker \
-                        -Dsonar.sources=. \
-                        -Dsonar.host.url=http://13.234.113.7:9000 \
-                        -Dsonar.login=\$SONAR_TOKEN || echo 'SonarQube scan failed'
+                sh """
+                    echo "🔨 Building Docker image..."
+                    docker build -t ${DOCKER_IMAGE} .
                 """
             }
         }
-    }
-}
+
+        stage('🔍 3. SonarQube SAST Scan') {
+            steps {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                    withCredentials([string(credentialsId: "${SONARQUBE_TOKEN}", variable: 'SONAR_TOKEN')]) {
+                        sh """
+                            mkdir -p "${SONAR_DIR}"
+                            cd "${SONAR_DIR}"
+
+                            curl -Lo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+                            unzip -o sonar-scanner.zip
+
+                            export PATH="${SONAR_DIR}/sonar-scanner-4.8.0.2856-linux/bin:\$PATH"
+                            cd "${WORKSPACE}"
+
+                            sonar-scanner \
+                                -Dsonar.projectKey=ghost-docker \
+                                -Dsonar.sources=. \
+                                -Dsonar.host.url=http://13.234.113.7:9000 \
+                                -Dsonar.login=\$SONAR_TOKEN || echo 'SonarQube scan failed'
+                        """
+                    }
+                }
+            }
+        }
 
         stage('4. OWASP Dependency Check') {
             steps {
-                echo "Running OWASP Dependency Check..."
                 catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
                     sh """
-                        mkdir -p "${OWASP_DIR}"
-                        mkdir -p "${WORKSPACE}/bin"
+                        mkdir -p "${OWASP_DIR}" "${WORKSPACE}/bin"
 
                         if [ ! -f "${WORKSPACE}/bin/dependency-check/bin/dependency-check.sh" ]; then
                             curl -L -o dependency-check.zip https://github.com/jeremylong/DependencyCheck/releases/download/v8.0.2/dependency-check-8.0.2-release.zip
@@ -80,12 +96,12 @@ pipeline {
                         fi
 
                         "${WORKSPACE}/bin/dependency-check/bin/dependency-check.sh" \
-                          --project "ghost-docker" \
-                          --scan "${WORKSPACE}" \
-                          --format "ALL" \
-                          --out "${OWASP_DIR}" \
-                          --noupdate \
-                          --exclude "${WORKSPACE}/bin,${WORKSPACE}/sonar" || echo 'OWASP scan completed with issues'
+                            --project "ghost-docker" \
+                            --scan "${WORKSPACE}" \
+                            --format "ALL" \
+                            --out "${OWASP_DIR}" \
+                            --noupdate \
+                            --exclude "${WORKSPACE}/bin,${WORKSPACE}/sonar" || echo 'OWASP scan completed with issues'
                     """
                 }
             }
@@ -93,11 +109,9 @@ pipeline {
 
         stage('5. Trivy Image Scan') {
             steps {
-                echo "Running Trivy scan on Docker image..."
                 catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
                     sh """
-                        mkdir -p "${TRIVY_REPORT_DIR}"
-                        mkdir -p "${WORKSPACE}/bin"
+                        mkdir -p "${TRIVY_REPORT_DIR}" "${WORKSPACE}/bin"
 
                         if [ ! -f "${WORKSPACE}/bin/trivy" ]; then
                             curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "${WORKSPACE}/bin"
@@ -116,11 +130,9 @@ pipeline {
 
         stage('6. IaC Security Scan') {
             steps {
-                echo "Running IaC Security Scans: Checkov, Terrascan, Conftest..."
                 catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
                     sh """
-                        mkdir -p "${IAC_DIR}"
-                        mkdir -p "${WORKSPACE}/bin"
+                        mkdir -p "${IAC_DIR}" "${WORKSPACE}/bin"
 
                         # Checkov
                         curl -sfL https://github.com/bridgecrewio/checkov/releases/latest/download/checkov-linux-amd64 -o "${WORKSPACE}/bin/checkov"
@@ -147,7 +159,6 @@ pipeline {
 
         stage('🔐 7. DockerHub Login & Push') {
             steps {
-                echo "Logging in to DockerHub and pushing image..."
                 withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh """
                         echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
@@ -157,24 +168,27 @@ pipeline {
             }
         }
 
-        stage('🔏 8. Cosign + SLSA Signing') {
-            steps {
-                echo "Signing Docker image with Cosign and attaching SLSA provenance..."
-                sh """
-                    mkdir -p "${WORKSPACE}/bin"
+       stage('🔏 8. Cosign + SLSA Signing') {
+         steps {
+            echo "Signing Docker image with Cosign and attaching SLSA provenance..."
+            sh """
+                mkdir -p "${WORKSPACE}/bin"
+            
+                # Download Cosign if not already present
+                if [ ! -f "${WORKSPACE}/bin/cosign" ]; then
                     curl -Lo "${WORKSPACE}/bin/cosign" https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64
                     chmod +x "${WORKSPACE}/bin/cosign"
+                fi
 
-                    export COSIGN_EXPERIMENTAL=1
+                export COSIGN_EXPERIMENTAL=1
 
-                    # Removed --type slsa for compatibility
-                    "${WORKSPACE}/bin/cosign" sign-blob \
-                        --predicate "${SLSA_PREDICATE}" \
-                        ${DOCKER_IMAGE} || echo 'Cosign SLSA signing failed, skipping.'
-                """
-            }
-        }
-
+                # Use 'attest' with only --predicate (type slsa is not supported in this version)
+                "${WORKSPACE}/bin/cosign" attest \
+                    --predicate "${SLSA_PREDICATE}" \
+                    ${DOCKER_IMAGE} || echo 'Cosign SLSA signing failed, skipping.'
+        """
+    }
+}
         stage('✅ 9. Pipeline Completed') {
             steps {
                 echo "🎉 DevSecOps pipeline executed successfully!"
