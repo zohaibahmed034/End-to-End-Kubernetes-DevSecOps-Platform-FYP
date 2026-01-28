@@ -1,0 +1,28 @@
+Manifest-Version: 1.0
+Created-By: Maven Archiver 3.6.4
+Build-Jdk-Spec: 21
+Specification-Title: Branch API Plugin
+Specification-Version: 0.0
+Implementation-Title: Branch API Plugin
+Implementation-Version: 2.1268.v044a_87612da_8
+Group-Id: org.jenkins-ci.plugins
+Artifact-Id: branch-api
+Short-Name: branch-api
+Long-Name: Branch API Plugin
+Url: https://github.com/jenkinsci/branch-api-plugin
+Compatible-Since-Version: 2.0.0
+Plugin-Version: 2.1268.v044a_87612da_8
+Hudson-Version: 2.504.3
+Jenkins-Version: 2.504.3
+Plugin-Dependencies: caffeine-api:3.2.3-194.v31a_b_f7a_b_5a_81,commons-l
+ ang3-api:3.19.0-104.v12125f33a_255,ionicons-api:94.vcc3065403257,cloudb
+ ees-folder:6.1053.vd62fb_b_f7367b_,scm-api:721.v54b_c43b_da_1db_
+Plugin-Developers: Stephen Connolly:stephenconnolly:
+Plugin-License-Name: The MIT license
+Plugin-License-Url: https://opensource.org/licenses/MIT
+Plugin-ScmConnection: scm:git:https://github.com/jenkinsci/branch-api-pl
+ ugin.git
+Plugin-ScmTag: 044a87612da86c5ecb3635a7d79974d5ff4b68a8
+Plugin-ScmUrl: https://github.com/jenkinsci/branch-api-plugin
+Implementation-Build: 044a87612da86c5ecb3635a7d79974d5ff4b68a8
+

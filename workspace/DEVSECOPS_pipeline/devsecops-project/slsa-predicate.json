@@ -1,0 +1,18 @@
+{
+  "_type": "https://in-toto.io/Statement/v0.1",
+  "subject": [
+    {
+      "name": "ghost-docker:latest",
+      "digest": {
+        "sha256": "YOUR_IMAGE_SHA256"
+      }
+    }
+  ],
+  "predicateType": "https://slsa.dev/provenance/v0.2",
+  "predicate": {
+    "buildType": "https://example.com/your/build-type",
+    "builder": {
+      "id": "https://jenkins.example.com/"
+    }
+  }
+}
