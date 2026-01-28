@@ -22,20 +22,19 @@ pipeline {
     }
 
     stages {
-        stage('📦 0. Configure Git') {
+        stage('0️⃣ Configure Git') {
             steps {
-                // Ensure git considers workspace safe (wrap in quotes for spaces)
                 sh 'git config --global --add safe.directory "$WORKSPACE"'
             }
         }
 
-        stage('📦 1. Clone Repository') {
+        stage('1️⃣ Clone Repository') {
             steps {
                 echo "Cloning GitHub repository..."
                 checkout([$class: 'GitSCM',
                     branches: [[name: 'main']],
                     doGenerateSubmoduleConfigurations: false,
-                    extensions: [[$class: 'WipeWorkspace']], // clean workspace
+                    extensions: [[$class: 'WipeWorkspace']],
                     userRemoteConfigs: [[
                         url: 'https://github.com/zohaibahmed034/End-to-End-Kubernetes-DevSecOps-Platform-FYP.git',
                         credentialsId: "${GITHUB_CREDENTIALS}"
@@ -44,47 +43,46 @@ pipeline {
             }
         }
 
-        stage('🔐 DockerHub Login') {
+        stage('2️⃣ DockerHub Login') {
             steps {
-                echo "Logging in to DockerHub..."
                 withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
                 }
             }
         }
 
-        stage('🔄 2. Pull Existing Docker Image') {
+        stage('3️⃣ Pull Existing Docker Image') {
             steps {
-                echo "Pulling existing Docker image from DockerHub..."
                 sh "docker pull ${DOCKER_IMAGE} || echo 'Image may not exist, skipping pull.'"
             }
         }
 
-        stage('Build Docker Image') {
+        stage('4️⃣ Build Docker Image') {
             steps {
-                echo "Building Docker image..."
                 sh """
-                    docker pull ghost:6-alpine || echo 'Base Ghost image pull failed, may be rate-limited'
+                    docker pull ghost:6-alpine || echo 'Base Ghost image may not exist or rate-limited'
                     docker build -t ${DOCKER_IMAGE} .
                 """
             }
         }
 
-        stage('🔍 3. SonarQube SAST Scan') {
+        stage('5️⃣ SonarQube SAST Scan') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
                     withCredentials([string(credentialsId: "${SONARQUBE_TOKEN}", variable: 'SONAR_TOKEN')]) {
                         sh """
                             mkdir -p "${SONAR_DIR}"
                             cd "${SONAR_DIR}"
-                            curl -Lo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
-                            unzip -o sonar-scanner.zip
+                            if [ ! -d "sonar-scanner-4.8.0.2856-linux" ]; then
+                                curl -Lo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+                                unzip -o sonar-scanner.zip
+                            fi
                             export PATH="${SONAR_DIR}/sonar-scanner-4.8.0.2856-linux/bin:\$PATH"
                             cd "${WORKSPACE}"
                             sonar-scanner \
                                 -Dsonar.projectKey=ghost-docker \
                                 -Dsonar.sources=. \
-                                -Dsonar.host.url=http://13.234.113.7:9000 \
+                                -Dsonar.host.url=http://13.232.180.60:9000 \
                                 -Dsonar.login=\$SONAR_TOKEN || echo 'SonarQube scan failed'
                         """
                     }
@@ -92,7 +90,7 @@ pipeline {
             }
         }
 
-        stage('4. OWASP Dependency Check') {
+        stage('6️⃣ OWASP Dependency Check') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
                     sh """
@@ -108,13 +106,13 @@ pipeline {
                             --format "ALL" \
                             --out "${OWASP_DIR}" \
                             --noupdate \
-                            --exclude "${WORKSPACE}/bin,${WORKSPACE}/sonar" || echo 'OWASP scan completed with issues'
+                            --exclude "${WORKSPACE}/bin,${SONAR_DIR}" || echo 'OWASP scan completed with issues'
                     """
                 }
             }
         }
 
-        stage('5. Trivy Image Scan') {
+        stage('7️⃣ Trivy Image Scan') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
                     sh """
@@ -133,32 +131,32 @@ pipeline {
             }
         }
 
-        stage('6. IaC Security Scan') {
+        stage('8️⃣ IaC Security Scan') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
                     sh """
                         mkdir -p "${IAC_DIR}" "${WORKSPACE}/bin"
-                        curl -sfL https://github.com/bridgecrewio/checkov/releases/latest/download/checkov-linux-amd64 -o "${WORKSPACE}/bin/checkov"
-                        chmod +x "${WORKSPACE}/bin/checkov"
+                        
+                        # Checkov
+                        [ -d "${WORKSPACE}/terraform" ] && {
+                            [ ! -f "${WORKSPACE}/bin/checkov" ] && curl -sfL https://github.com/bridgecrewio/checkov/releases/latest/download/checkov-linux-amd64 -o "${WORKSPACE}/bin/checkov" && chmod +x "${WORKSPACE}/bin/checkov"
+                            "${WORKSPACE}/bin/checkov" -d "${WORKSPACE}/terraform" --output json > "${IAC_DIR}/checkov-terraform.json"
+                        } || echo "No Terraform files"
 
-                        [ -d "${WORKSPACE}/terraform" ] && "${WORKSPACE}/bin/checkov" -d "${WORKSPACE}/terraform" --output json > "${IAC_DIR}/checkov-terraform.json" || echo "No Terraform files"
                         [ -d "${WORKSPACE}/k8s" ] && "${WORKSPACE}/bin/checkov" -d "${WORKSPACE}/k8s" --output json > "${IAC_DIR}/checkov-k8s.json" || echo "No Kubernetes files"
 
-                        if ! command -v terrascan &>/dev/null; then
-                            curl -sfL https://github.com/accurics/terrascan/releases/latest/download/terrascan-linux-amd64 -o "${WORKSPACE}/bin/terrascan"
-                            chmod +x "${WORKSPACE}/bin/terrascan"
-                        fi
+                        # Terrascan
+                        [ ! -f "${WORKSPACE}/bin/terrascan" ] && curl -sfL https://github.com/accurics/terrascan/releases/latest/download/terrascan-linux-amd64 -o "${WORKSPACE}/bin/terrascan" && chmod +x "${WORKSPACE}/bin/terrascan"
                         [ -d "${WORKSPACE}/terraform" ] && "${WORKSPACE}/bin/terrascan" scan -d "${WORKSPACE}/terraform" -o json > "${IAC_DIR}/terrascan.json" || echo "No Terraform files"
 
-                        if command -v conftest &>/dev/null && [ -d "${WORKSPACE}/k8s" ]; then
-                            conftest test "${WORKSPACE}/k8s" > "${IAC_DIR}/conftest.log" || true
-                        fi
+                        # Conftest
+                        command -v conftest &>/dev/null && [ -d "${WORKSPACE}/k8s" ] && conftest test "${WORKSPACE}/k8s" > "${IAC_DIR}/conftest.log" || echo "No Conftest/K8s files"
                     """
                 }
             }
         }
 
-        stage('🔐 7. DockerHub Push') {
+        stage('9️⃣ DockerHub Push') {
             steps {
                 withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh """
@@ -169,9 +167,8 @@ pipeline {
             }
         }
 
-        stage('🔏 8. Cosign + SLSA Signing') {
+        stage('🔏 Cosign + SLSA Signing') {
             steps {
-                echo "Signing Docker image with Cosign..."
                 sh """
                     mkdir -p "${WORKSPACE}/bin"
                     if [ ! -f "${WORKSPACE}/bin/cosign" ]; then
@@ -179,14 +176,12 @@ pipeline {
                         chmod +x "${WORKSPACE}/bin/cosign"
                     fi
                     export COSIGN_EXPERIMENTAL=1
-                    "${WORKSPACE}/bin/cosign" attest \
-                        --predicate "${SLSA_PREDICATE}" \
-                        ${DOCKER_IMAGE} || echo 'Cosign SLSA signing failed, skipping.'
+                    "${WORKSPACE}/bin/cosign" attest --predicate "${SLSA_PREDICATE}" ${DOCKER_IMAGE} || echo 'Cosign SLSA signing failed, skipping.'
                 """
             }
         }
 
-        stage('✅ 9. Pipeline Completed') {
+        stage('🔚 Pipeline Completed') {
             steps {
                 echo "🎉 DevSecOps pipeline executed successfully!"
             }
