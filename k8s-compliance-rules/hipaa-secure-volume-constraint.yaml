@@ -1,0 +1,10 @@
+# hipaa-secure-volume-constraint.yaml
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sHIPAASecureVolume
+metadata:
+  name: hipaa-secure-volumes
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]

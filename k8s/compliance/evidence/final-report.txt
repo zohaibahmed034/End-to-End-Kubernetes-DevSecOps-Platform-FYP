@@ -1,0 +1,8 @@
+=== COMPLIANCE AUTOMATION REPORT ===
+Timestamp: Fri Jan 30 05:22:36 UTC 2026
+CIS Controls PASS: 0
+0
+CIS Controls FAIL: 0
+0
+K8s Events: 24
+Gatekeeper Status: 4/4

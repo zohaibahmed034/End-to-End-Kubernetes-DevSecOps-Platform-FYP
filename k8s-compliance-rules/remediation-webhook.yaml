@@ -1,0 +1,12 @@
+# remediation-webhook.yaml (optional advanced)
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: compliance-remediation
+webhooks:
+- name: remediation.compliance.example.com
+  rules:
+  - operations: ["CREATE", "UPDATE"]
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]

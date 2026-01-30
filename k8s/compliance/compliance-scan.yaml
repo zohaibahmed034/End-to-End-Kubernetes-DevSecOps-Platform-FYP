@@ -1,0 +1,11 @@
+# Compliance dashboard (simple)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-reports
+data:
+  cis-benchmark.json: |
+    {"compliance_score": "85%", "failures": 12, "pass": 78}
+  opa-scan.json: |
+    {"policies_violated": 3, "total_policies": 25}
+

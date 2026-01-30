@@ -1,0 +1,24 @@
+LAST SEEN   TYPE     REASON                    OBJECT                                 MESSAGE
+21m         Normal   Starting                  node/kind-control-plane                
+22m         Normal   NodeHasSufficientMemory   node/kind-control-plane                Node kind-control-plane status is now: NodeHasSufficientMemory
+22m         Normal   NodeHasNoDiskPressure     node/kind-control-plane                Node kind-control-plane status is now: NodeHasNoDiskPressure
+22m         Normal   NodeHasSufficientPID      node/kind-control-plane                Node kind-control-plane status is now: NodeHasSufficientPID
+22m         Normal   NodeAllocatableEnforced   node/kind-control-plane                Updated Node Allocatable limit across pods
+21m         Normal   NodeHasSufficientMemory   node/kind-control-plane                Node kind-control-plane status is now: NodeHasSufficientMemory
+21m         Normal   NodeHasNoDiskPressure     node/kind-control-plane                Node kind-control-plane status is now: NodeHasNoDiskPressure
+21m         Normal   NodeHasSufficientPID      node/kind-control-plane                Node kind-control-plane status is now: NodeHasSufficientPID
+21m         Normal   NodeAllocatableEnforced   node/kind-control-plane                Updated Node Allocatable limit across pods
+21m         Normal   Starting                  node/kind-control-plane                Starting kubelet.
+21m         Normal   RegisteredNode            node/kind-control-plane                Node kind-control-plane event: Registered Node kind-control-plane in Controller
+21m         Normal   NodeReady                 node/kind-control-plane                Node kind-control-plane status is now: NodeReady
+10m         Normal   WaitingForApproval        certificaterequest/secure-app-cert-1   Not signing CertificateRequest until it is Approved
+10m         Normal   WaitingForApproval        certificaterequest/secure-app-cert-1   Not signing CertificateRequest until it is Approved
+10m         Normal   WaitingForApproval        certificaterequest/secure-app-cert-1   Not signing CertificateRequest until it is Approved
+10m         Normal   WaitingForApproval        certificaterequest/secure-app-cert-1   Not signing CertificateRequest until it is Approved
+10m         Normal   WaitingForApproval        certificaterequest/secure-app-cert-1   Not signing CertificateRequest until it is Approved
+10m         Normal   cert-manager.io           certificaterequest/secure-app-cert-1   Certificate request has been approved by cert-manager.io
+10m         Normal   CertificateIssued         certificaterequest/secure-app-cert-1   Certificate fetched from issuer successfully
+10m         Normal   Issuing                   certificate/secure-app-cert            Issuing certificate as Secret does not exist
+10m         Normal   Generated                 certificate/secure-app-cert            Stored new private key in temporary Secret resource "secure-app-cert-x5hf6"
+10m         Normal   Requested                 certificate/secure-app-cert            Created new CertificateRequest resource "secure-app-cert-1"
+10m         Normal   Issuing                   certificate/secure-app-cert            The certificate has been successfully issued

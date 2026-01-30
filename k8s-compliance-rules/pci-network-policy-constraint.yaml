@@ -1,0 +1,10 @@
+# pci-network-policy-constraint.yaml
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sPCINetworkPolicy
+metadata:
+  name: pci-network-policy-required
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]

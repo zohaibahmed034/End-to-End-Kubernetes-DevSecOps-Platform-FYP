@@ -1,0 +1,21 @@
+# sox-constraint-template.yaml
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sno privileged
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sNoPrivileged
+  targets:
+  - target: admission.k8s.gatekeeper.sh
+    rego: |
+      package k8sno privileged
+      
+      violation[{"msg": msg}] {
+        provided := input.review.object.spec.containers[_]
+        provided.securityContext.privileged == true
+        msg := "Privileged containers prohibited (SOX 404)"
+      }
+

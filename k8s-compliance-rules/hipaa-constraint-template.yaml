@@ -1,0 +1,28 @@
+# hipaa-constraint-template.yaml
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8shipaasecurevolume
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sHIPAASecureVolume
+  targets:
+  - target: admission.k8s.gatekeeper.sh
+    rego: |
+      package k8shipaasecurevolume
+      
+      violation[{"msg": msg}] {
+        vol := input.review.object.spec.volumes[_]
+        vol.hostPath
+        msg := "hostPath volumes prohibited (HIPAA PHI protection)"
+      }
+      
+      violation[{"msg": msg}] {
+        container := input.review.object.spec.containers[_]
+        volMount := container.volumeMounts[_]
+        volMount.mountPath == "/etc/ssl"
+        not encryption_enabled(container)
+        msg := "SSL certificates must be encrypted (HIPAA 164.312)"
+      }
